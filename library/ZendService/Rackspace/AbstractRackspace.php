@@ -15,9 +15,8 @@ use ZendService\Rackspace\Exception;
 
 abstract class AbstractRackspace
 {
-    const VERSION                = 'v1.0';
-    const US_AUTH_URL            = 'https://auth.api.rackspacecloud.com';
-    const UK_AUTH_URL            = 'https://lon.auth.api.rackspacecloud.com';
+    const VERSION                = 'v2.0';
+    const AUTH_URL               = 'https://identity.api.rackspacecloud.com';
     const API_FORMAT             = 'json';
     const USER_AGENT             = 'ZendService\Rackspace';
     const STORAGE_URL            = "X-Storage-Url";
@@ -67,7 +66,7 @@ abstract class AbstractRackspace
      * @var boolean
      */
     protected $useServiceNet = false;
-    
+
     /**
      * Error Msg
      *
@@ -115,7 +114,7 @@ abstract class AbstractRackspace
      * @param HttpClient $httpClient
      * @throws Exception\InvalidArgumentException
      */
-    public function __construct($user, $key, $authUrl = self::US_AUTH_URL, HttpClient $httpClient = null)
+    public function __construct($user, $key, HttpClient $httpClient = null)
     {
         if (!isset($user)) {
             throw new Exception\InvalidArgumentException("The user cannot be empty");
@@ -123,12 +122,10 @@ abstract class AbstractRackspace
         if (!isset($key)) {
             throw new Exception\InvalidArgumentException("The key cannot be empty");
         }
-        if (!in_array($authUrl, array(self::US_AUTH_URL, self::UK_AUTH_URL))) {
-            throw new Exception\InvalidArgumentException("The authentication URL should be valid");
-        }
+
         $this->setUser($user);
         $this->setKey($key);
-        $this->setAuthUrl($authUrl);
+        $this->setAuthUrl(self::AUTH_URL);
         $this->setHttpClient($httpClient ?: new HttpClient);
     }
 
@@ -141,7 +138,7 @@ abstract class AbstractRackspace
         $this->httpClient = $httpClient;
         return $this;
     }
-    
+
     /**
      * get the HttpClient instance
      *
@@ -154,10 +151,10 @@ abstract class AbstractRackspace
 
     /**
      * Sets whether to use ServiceNet
-     * 
+     *
      * ServiceNet is Rackspace's internal network. Bandwidth on ServiceNet is
      * not charged.
-     * 
+     *
      * @param boolean $useServiceNet
      */
     public function setServiceNet($useServiceNet = true)
@@ -165,10 +162,10 @@ abstract class AbstractRackspace
         $this->useServiceNet = $useServiceNet;
         return $this;
     }
-    
+
     /**
      * Get whether we're using ServiceNet
-     * 
+     *
      * @return boolean
      */
     public function getServiceNet()
@@ -287,7 +284,7 @@ abstract class AbstractRackspace
      */
     public function setAuthUrl($url)
     {
-        if (!empty($url) && in_array($url, array(self::US_AUTH_URL, self::UK_AUTH_URL))) {
+        if (!empty($url)) {
             $this->authUrl = $url;
         } else {
             throw new Exception\InvalidArgumentException("The authentication URL is not valid");
@@ -354,9 +351,11 @@ abstract class AbstractRackspace
     {
         $client = $this->getHttpClient();
         $client->resetParameters();
-        if (empty($headers[self::AUTHUSER_HEADER])) {
-            $headers[self::AUTHTOKEN]= $this->getToken();
+
+        if (!empty($this->token)) {
+            $headers[self::AUTHTOKEN]= $this->token;
         }
+
         if (empty($headers['Content-Type']) && $method == 'PUT' && empty($body)) {
             $headers['Content-Type'] = '';
         }
@@ -371,7 +370,9 @@ abstract class AbstractRackspace
                 $headers['Content-Type']= 'application/json';
             }
         }
+
         $client->setHeaders($headers);
+
         $client->setUri($url);
         $this->errorMsg = null;
         $this->errorCode = null;
@@ -385,21 +386,44 @@ abstract class AbstractRackspace
      */
     public function authenticate()
     {
-        $headers = array (
-            self::AUTHUSER_HEADER => $this->user,
-            self::AUTHKEY_HEADER => $this->key
+        $headers['Content-Type'] = 'application/json';
+        $data = json_encode(
+            array(
+                'auth' => array(
+                    'RAX-KSKEY:apiKeyCredentials' => array(
+                        'username' => $this->user,
+                        'apiKey' => $this->key
+                    )
+                )
+            )
         );
-        $result = $this->httpCall($this->authUrl.'/'.self::VERSION,'GET', $headers);
-        if ($result->getStatusCode()===204) {
-            $this->token = $result->getHeaders()->get(self::AUTHTOKEN)->getFieldValue();
-            $this->storageUrl = $result->getHeaders()->get(self::STORAGE_URL)->getFieldValue();
-            if ($this->useServiceNet) {
-                $this->storageUrl = "https://snet-" . substr($this->storageUrl, strlen("https://"));
+
+        $url= $this->authUrl .'/' .self::VERSION . '/tokens';
+
+        //Authenticate
+        $result = $this->httpCall($url,'POST', $headers, null, $data);
+        $_content = json_decode($result->getBody());
+
+        if($_content->access) {
+            //Set endpoint urls
+            foreach($_content->access->serviceCatalog as $_key => $_service) {
+
+                if($_service->name == 'cloudServersOpenStack')
+                    $this->managementUrl = $_content->access->serviceCatalog[$_key]->endpoints[0]->publicURL;
+
+                if($_service->name == 'cloudFilesCDN')
+                    $this->cdnUrl = $_content->access->serviceCatalog[$_key]->endpoints[0]->publicURL;
+
+                if($_service->name == 'cloudFiles')
+                    $this->cdnUrl = $_content->access->serviceCatalog[$_key]->endpoints[0]->publicURL;
             }
-            $this->cdnUrl = $result->getHeaders()->get(self::CDNM_URL)->getFieldValue();
-            $this->managementUrl = $result->getHeaders()->get(self::MANAGEMENT_URL)->getFieldValue();
+
+            //Set token info
+            $this->token = $_content->access->token->id;
+
             return true;
         }
+
         $this->errorMsg = $result->getBody();
         $this->errorCode = $result->getStatusCode();
         return false;
