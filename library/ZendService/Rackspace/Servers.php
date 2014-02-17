@@ -140,8 +140,8 @@ class Servers extends AbstractRackspace
         if (!empty($metadata)) {
             $data['metadata']= $metadata;
         }
-        $data['flavorRef']= (integer) $data['flavorRef'];
-        $data['imageRef']= (integer) $data['imageRef'];
+        $data['flavorRef']= $data['flavorRef'];
+        $data['imageRef']= $data['imageRef'];
         if (!empty($files)) {
             foreach ($files as $serverPath => $filePath) {
                 if (!file_exists($filePath)) {
