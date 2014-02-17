@@ -30,17 +30,17 @@ class Server
      */
     protected $id;
     /**
-     * Image id of the server
+     * Image ref of the server
      *
      * @var string
      */
-    protected $imageId;
+    protected $imageRef;
     /**
-     * Flavor id of the server
+     * Flavor ref of the server
      *
      * @var string
      */
-    protected $flavorId;
+    protected $flavorRef;
     /**
      * Host id
      *
@@ -102,11 +102,12 @@ class Server
         $this->service = $service;
         $this->name = $data['name'];
         $this->id = $data['id'];
-        if (isset($data['imageId'])) {
-            $this->imageId= $data['imageId'];
+
+        if (isset($data['imageRef'])) {
+            $this->imageId= $data['imageRef'];
         }
-        if (isset($data['flavorId'])) {
-            $this->flavorId= $data['flavorId'];
+        if (isset($data['flavorRef'])) {
+            $this->flavorId= $data['flavorRef'];
         }
         if (isset($data['hostId'])) {
             $this->hostId= $data['hostId'];
@@ -146,22 +147,22 @@ class Server
         return $this->id;
     }
     /**
-     * Get the server's image Id
+     * Get the server's image Ref
      *
      * @return string
      */
-    public function getImageId()
+    public function getImageRef()
     {
-        return $this->imageId;
+        return $this->imageRef;
     }
     /**
-     * Get the server's flavor Id
+     * Get the server's flavor Ref
      *
      * @return string
      */
-    public function getFlavorId()
+    public function getFlavorRef()
     {
-        return $this->flavorId;
+        return $this->flavorRef;
     }
     /**
      * Get the server's host Id
@@ -299,8 +300,8 @@ class Server
         return array (
             'name'      => $this->name,
             'id'        => $this->id,
-            'imageId'   => $this->imageId,
-            'flavorId'  => $this->flavorId,
+            'imageRef'   => $this->imageRef,
+            'flavorRef'  => $this->flavorRef,
             'hostId'    => $this->hostId,
             'status'    => $this->status,
             'progress'  => $this->progress,

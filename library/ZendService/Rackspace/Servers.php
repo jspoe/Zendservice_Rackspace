@@ -128,10 +128,10 @@ class Servers extends AbstractRackspace
         if (!isset($data['name'])) {
             throw new Exception\InvalidArgumentException(self::ERROR_PARAM_NO_NAME);
         }
-        if (!isset($data['flavorId'])) {
+        if (!isset($data['flavorRef'])) {
             throw new Exception\InvalidArgumentException(self::ERROR_PARAM_NO_FLAVORID);
         }
-        if (!isset($data['imageId'])) {
+        if (!isset($data['imageRef'])) {
             throw new Exception\InvalidArgumentException(self::ERROR_PARAM_NO_IMAGEID);
         }
         if (count($files)>self::LIMIT_NUM_FILE) {
@@ -140,8 +140,8 @@ class Servers extends AbstractRackspace
         if (!empty($metadata)) {
             $data['metadata']= $metadata;
         }
-        $data['flavorId']= (integer) $data['flavorId'];
-        $data['imageId']= (integer) $data['imageId'];
+        $data['flavorRef']= (integer) $data['flavorRef'];
+        $data['imageRef']= (integer) $data['imageRef'];
         if (!empty($files)) {
             foreach ($files as $serverPath => $filePath) {
                 if (!file_exists($filePath)) {
@@ -167,6 +167,7 @@ class Servers extends AbstractRackspace
             case '200' :
             case '202' : // break intentionally omitted
                 $server = json_decode($result->getBody(),true);
+                $server['server'] = array_merge($server['server'], $data);
                 return new Servers\Server($this,$server['server']);
             case '503' :
                 $this->errorMsg= self::ERROR_SERVICE_UNAVAILABLE;

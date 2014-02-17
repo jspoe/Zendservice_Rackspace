@@ -392,7 +392,7 @@ abstract class AbstractRackspace
                 'auth' => array(
                     'RAX-KSKEY:apiKeyCredentials' => array(
                         'username' => $this->user,
-                        'apiKey' => $this->key
+                        'apiKey'   => $this->key
                     )
                 )
             )
