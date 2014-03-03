@@ -123,10 +123,16 @@ abstract class AbstractRackspace
             throw new Exception\InvalidArgumentException("The key cannot be empty");
         }
 
+        $httpConfig = array(
+            'adapter' => 'Zend\Http\Client\Adapter\Socket',
+            'sslverifypeer' => false
+        );
+
+
         $this->setUser($user);
         $this->setKey($key);
         $this->setAuthUrl(self::AUTH_URL);
-        $this->setHttpClient($httpClient ?: new HttpClient);
+        $this->setHttpClient($httpClient ?: new HttpClient(null, $httpConfig));
     }
 
     /**
